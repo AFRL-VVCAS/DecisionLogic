@@ -1,0 +1,179 @@
+Specification SpaceACA
+
+Imports:
+
+Units:
+
+Types:
+  StateType is an enum {ST, F, M, A} // STandby, Failed, Maneuver, Active
+
+Constants:
+
+Patterns:
+
+Inputs:
+  f is a bool       // failure detected  
+  i is a bool       // interlock detected
+  c is a bool       // condition to maneuver  
+  m is a bool       // maneuver completed
+  p is a bool       // manual interrupt
+
+Outputs:
+  op_state is a StateType
+
+State:
+
+Macros:
+  prevState : StateType = previous op_state with initial value ST 
+
+Assumptions:
+
+Requirements:
+  // Define condition to stay in the standby {ST} state
+  T01 : (prevState == ST and (not f and i))
+    implies (op_state == ST) 
+  
+  // Define condition to stay in the failed {F} state 
+  T02 : (prevState == F and f)
+    implies (op_state == F)
+     
+  // Define condition to stay in the maneuver {M} state     
+  T03 : (prevState == M and (not m and not p))
+    implies (op_state == M)
+    
+  // Define condition to stay in the active {A} state    
+  T04 : (prevState == A and (not f and not i and not p and not c)) 
+    implies (op_state == A)
+    
+  // Failed {F} to Standby {ST} transition    
+  T05 : (prevState == F and not f)
+    implies (op_state == ST)
+    
+  // Standby {ST} to Failed {F} transition    
+  T06 : (prevState == ST and f)
+    implies (op_state == F)
+    
+  // Active {A} to Failed {F} transition
+  T07 : (prevState == A and f)
+    implies (op_state == F)
+    
+  // Active {A} to Standby {ST} transition 
+  T08 : (prevState == A and (not f and (i or p)))
+    implies (op_state == ST)
+
+  // Maneuver {M} to Standby {ST} transition
+  T09 : (prevState == M and (p or (m and i and not f)))
+    implies (op_state == ST)
+
+  // Standby {ST} to Active {A} transition
+  T10 : (prevState == ST and (not f and not i))
+    implies (op_state == A)
+
+  // Maneuver {M} to Active {A} transition
+  T11 : (prevState == M and (m and not p and not f and not i))
+    implies (op_state == A)
+
+  // Active to Maneuver Transition
+  T12 : (prevState == A and (not f and not i and not p and c))
+    implies (op_state == M)
+    
+  // Maneuver {M} to Failed {F} transition
+  T13 : (prevState == M and (not p and m and f))
+    implies (op_state == F)
+
+Properties:
+
+  // Verify that only one state can be active at a time (prot
+  P_MUX_inST: (op_state == ST)    // in Standby 
+    implies not ((op_state == F) or (op_state == M) or (op_state == A)) 
+  P_MUX_inF : (op_state == F)     // in Failed
+    implies not ((op_state == ST) or (op_state == M) or (op_state == A))   
+  P_MUX_inM : (op_state == M)     // in Maneuver
+    implies not ((op_state == ST) or (op_state == F) or (op_state == A))
+  P_MUX_inA : (op_state == A)     // in Active
+    implies not ((op_state == ST) or (op_state == F) or (op_state == M))
+
+  // Conditions impacting transition from Failed state
+  PF01 : (prevState == F and f) 
+    implies (op_state == F)
+  PF02 : (prevState == F and not f) 
+    implies (op_state == ST)
+  
+  //Conditions impacting transition from Standby state
+  PS01 : (prevState == ST and not f and not i) 
+    implies (op_state == A)
+  PS02 : (prevState == ST and not f and i) 
+    implies (op_state == ST)
+  PS03 : (prevState == ST and f and not i) 
+    implies (op_state == F)
+  PS04 : (prevState == ST and f and i) 
+    implies (op_state == F)
+  
+  //Conditions impacting transition from Active State
+  PA01 : (prevState == A and not f and not i and not p and not c) 
+    implies (op_state == A)
+  PA02 : (prevState == A and not f and not i and not p and c) 
+    implies (op_state == M)
+  PA03 : (prevState == A and not f and not i and p and not c) 
+    implies (op_state == ST)
+  PA04 : (prevState == A and not f and not i and p and c) 
+    implies (op_state == ST)
+  PA05 : (prevState == A and not f and i and not p and not c) 
+    implies (op_state == ST)
+  PA06 : (prevState == A and not f and i and not p and c) 
+    implies (op_state == ST)
+  PA07 : (prevState == A and not f and i and p and not c) 
+    implies (op_state == ST)
+  PA08 : (prevState == A and not f and i and p and c) 
+    implies (op_state == ST)
+  PA09 : (prevState == A and f and not i and not p and not c) 
+    implies (op_state == F)
+  PA10 : (prevState == A and f and not i and not p and c) 
+    implies (op_state == F)
+  PA11 : (prevState == A and f and not i and p and not c) 
+    implies (op_state == F)
+  PA12 : (prevState == A and f and not i and p and c) 
+    implies (op_state == F)
+  PA13 : (prevState == A and f and i and not p and not c) 
+    implies (op_state == F)
+  PA14 : (prevState == A and f and i and not p and c) 
+    implies (op_state == F)
+  PA15 : (prevState == A and f and i and p and not c) 
+    implies (op_state == F)
+  PA16 : (prevState == A and f and i and p and c) 
+    implies (op_state == F)
+  
+  //Conditions impacting transition from Maneuver State
+  PM01 : (prevState == M and not p and not m and not f and not i) 
+    implies (op_state == M)
+  PM02 : (prevState == M and not p and not m and not f and i) 
+    implies (op_state == M)
+  PM03 : (prevState == M and not p and not m and f and not i) 
+    implies (op_state == M)
+  PM04 : (prevState == M and not p and not m and f and i) 
+    implies (op_state == M)
+  PM05 : (prevState == M and not p and m and not f and not i) 
+    implies (op_state == A)
+  PM06 : (prevState == M and not p and m and not f and i) 
+    implies (op_state == ST)  
+  PM07 : (prevState == M and not p and m and f and not i) 
+    implies (op_state == F)
+  PM08 : (prevState == M and not p and m and f and i) 
+    implies (op_state == F)
+  PM09 : (prevState == M and p and not m and not f and not i) 
+    implies (op_state == ST)
+  PM10 : (prevState == M and p and not m and not f and i) 
+    implies (op_state == ST)
+  PM11 : (prevState == M and p and not m and f and not i) 
+    implies (op_state == ST)
+  PM12 : (prevState == M and p and not m and f and i) 
+    implies (op_state == ST)
+  PM13 : (prevState == M and p and m and not f and not i) 
+    implies (op_state == ST)
+  PM14 : (prevState == M and p and m and not f and i) 
+    implies (op_state == ST)
+  PM15 : (prevState == M and p and m and f and not i) 
+    implies (op_state == ST)
+  PM16 : (prevState == M and p and m and f and i) 
+    implies (op_state == ST)
+  
